@@ -16,11 +16,10 @@ def addition(vectors: List[List], sign: bool = True) -> List[float]:
     :param vectors: Список векторов, над которыми будет производится операция. Векторы должны быть одинаковой длины.
     :param sign: Логическое значение, определяющее знак операции: для сложения - True, для вычетания - False. По умолчанию True.
         :return: Список из компонент, получившихся в результате сложения или вычитания."""
-
-    prev_vector = 0
+    prev_vector: float = 0
 
     for i, vector in enumerate(vectors):
-        if vector is not True:
+        if not vector:
             raise Exception('Вектор не может быть пустым.')
         if i == 0:
             prev_vector = len(vector)
@@ -30,13 +29,16 @@ def addition(vectors: List[List], sign: bool = True) -> List[float]:
     result: List[float] = []
 
     for i in range(len(vectors[0])):
-        sum = 0
+        sum: float = 0
 
-        for vector in vectors:
+        for j, vector in enumerate(vectors):
             if sign:
                 sum += vector[i]
             else:
-                sum -= vector[i]
+                if j == 0:
+                    sum = vector[i]
+                else:
+                    sum -= vector[i]
 
         result.append(sum)
 
