@@ -52,17 +52,36 @@ def lambda_tensor_calculate(structure: List[Union[ElasticStiffnessTensor, List[E
 
     return result
 
+def is_elastic_modules_exist(c_eff_components: list[float]) -> str:
+    '''
+    Проверка существования полученного материала.
+    :param c_eff_components: Компоненты тензора эффективной упругости.
+    :return: Существует материал или нет.
+    '''
+    m = c_eff_components[1] / 2
+    l = c_eff_components[0] - m
+
+    if m <= 0 and l + 2 * m <= 0:
+        return f"Такой материал не может существовать, так как μ = {m} <= 0 и λ + 2μ = {l + 2 * m} <= 0."
+
+    if m <= 0:
+        return f"Такой материал не может существовать, так как μ = {m} <= 0."
+
+    if l + 2 * m <= 0:
+        return f"Такой материал не может существовать, так как λ + 2μ = {l + 2 * m} <= 0."
+
+    return "Такой материал может существовать."
 
 def effective_stiffness_calculate(
         structure: List[Union[ElasticStiffnessTensor, List[ElasticStiffnessTensor]]],
         lambda_list: List[ResultTransverselyIsotropicTensor],
         volume: float
-) -> List[Union[ResultTransverselyIsotropicTensor, Annotated[List[float], 2], float]]:
+) -> List[Union[ResultTransverselyIsotropicTensor, str,  Annotated[List[float], 2], float]]:
     '''
     Находит эффективный тензор жесткости, соотношение коэффициентов Ламе для матрицы и неоднородности, и объемную долю.
     :param structure: Массив из тензора жеткости матрицы и неоднородностей.
     :param lambda_list: Массив тензоров Λ.
-        :return: Эффективный тензор жесткости, соотношение коэффициентов Ламе для матрицы и неоднородности, и объемную долю.
+        :return: Эффективный тензор жесткости, соотношение коэффициентов Ламе для неоднородности и матрицы, и объемную долю.
     '''
 
     C_0 = structure[0]
@@ -76,6 +95,8 @@ def effective_stiffness_calculate(
         step_3 = double_dot_product([step_2, lam])
         smth.append(step_3)
         l, m = inhomo.stiffness_tensor.constants
-    return [addition(smth + [C_0]).components, [l / C_0.constants[0] , m / C_0.constants[1]], fi]
+
+    C_eff = addition(smth + [C_0]).components
+    return [C_eff, is_elastic_modules_exist(C_eff), [l / C_0.constants[0] , m / C_0.constants[1]], fi]
 
 

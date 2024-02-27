@@ -15,7 +15,10 @@ class inhomogeneity:
 
         self.__type_list: List[str] = ['sphere', 'spheroid', 'ellipsoid']
 
-
+        if const[1] <= 0:
+            raise Exception(f"Такая неоднородность не может существовать, так как μ = {const[1]} <= 0! Необходимо, чтобы выполнялось условие μ > 0.")
+        if const[0] + 2 * const[1] <= 0:
+            raise Exception(f"Такая неоднородность не может существовать, так как λ + 2μ = {const[0] + 2 * const[1]} <= 0! Необходимо, чтобы выполнялось условие λ + 2μ > 0.")
         if inhomo_type not in self.__type_list:
             raise Exception(f'Тип должен совпадать с одним из указанного списка из {self.__type_list} .')
 
