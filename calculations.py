@@ -89,14 +89,89 @@ def effective_stiffness_calculate(
     smth: list = []
     fi: float = 0
     for inhomo, lam in zip(inhomos, lambda_list):
-        fi += inhomo.volume / volume
+        dev_v = inhomo.volume / volume
+        fi += dev_v
         step_1 = addition([inhomo.stiffness_tensor, C_0], False)
-        step_2 = multiplication(fi, step_1)
+        step_2 = multiplication(dev_v, step_1)
         step_3 = double_dot_product([step_2, lam])
         smth.append(step_3)
         l, m = inhomo.stiffness_tensor.constants
 
     C_eff = addition(smth + [C_0]).components
-    return [C_eff, is_elastic_modules_exist(C_eff), [l / C_0.constants[0] , m / C_0.constants[1]], fi]
+    return [C_eff, is_elastic_modules_exist(C_eff), [l / C_0.constants[0], m / C_0.constants[1]], fi]
 
 
+def effective_stiffness_calculate_maxwell_method(
+        structure: List[Union[ElasticStiffnessTensor, List[ElasticStiffnessTensor]]],
+        lambda_list: List[ResultTransverselyIsotropicTensor],
+        volume: float
+) -> List[Union[ResultTransverselyIsotropicTensor, str,  Annotated[List[float], 2], float]]:
+    '''
+    Находит эффективный тензор жесткости, соотношение коэффициентов Ламе для матрицы и неоднородности, и объемную долю.
+    :param structure: Массив из тензора жеткости матрицы и неоднородностей.
+    :param lambda_list: Массив тензоров Λ.
+        :return: Эффективный тензор жесткости, соотношение коэффициентов Ламе для неоднородности и матрицы, и объемную долю.
+    '''
+
+    C_0 = structure[0]
+    inhomos = structure[1]
+    smth: list = []
+    fi = 0
+    b = 3 / 4 * volume
+
+    for inhomo, lam in zip(inhomos, lambda_list):
+        dev_v = inhomo.volume / volume
+        fi += dev_v
+        P = inhomo.hills_tensor
+        step_1 = addition([inhomo.stiffness_tensor, C_0], False).inverse()
+        step_2 = addition([step_1, P]).inverse()
+        step_3 = multiplication(dev_v, step_2)
+        step_4 = double_dot_product([step_2, lam])
+        smth.append(step_4)
+        l, m = inhomo.stiffness_tensor.constants
+
+
+    if fi == 0:
+        C_eff = C_0.components
+    else:
+        N = addition(smth).inverse()
+        inv_add = addition([N, P], False).inverse()
+        C_eff = addition([C_0, inv_add]).components
+
+    return [C_eff, is_elastic_modules_exist(C_eff), [l / C_0.constants[0], m / C_0.constants[1]], fi]
+
+def effective_stiffness_calculate_kanaun_levin_method(
+        structure: List[Union[ElasticStiffnessTensor, List[ElasticStiffnessTensor]]],
+        volume: float
+) -> List[Union[ResultTransverselyIsotropicTensor, str,  Annotated[List[float], 2], float]]:
+    '''
+    Находит эффективный тензор жесткости, соотношение коэффициентов Ламе для матрицы и неоднородности, и объемную долю.
+    :param structure: Массив из тензора жеткости матрицы и неоднородностей.
+    :param lambda_list: Массив тензоров Λ.
+        :return: Эффективный тензор жесткости, соотношение коэффициентов Ламе для неоднородности и матрицы, и объемную долю.
+    '''
+
+    C_0 = structure[0]
+    inhomos = structure[1]
+    fi = 0
+    for inhomo in inhomos:
+        dev_v = inhomo.volume / volume
+        fi += dev_v
+        C_1 = inhomo.stiffness_tensor
+        P = inhomo.hills_tensor
+        l, m = inhomo.stiffness_tensor.constants
+    print('Доля:', fi)
+    print('Тензор Хилла:', P)
+    print('Неоднородность', C_1)
+    print('Матрица', C_0)
+    step_1 = addition([C_1, C_0], False).inverse()
+    step_2 = multiplication(1 - fi, P)
+    step_3 = addition([step_1, step_2]).inverse()
+    step_4 = multiplication(fi, step_3)
+
+    if fi == 0:
+        C_eff = C_0.components
+    else:
+        C_eff = addition([C_0, step_4]).components
+
+    return [C_eff, is_elastic_modules_exist(C_eff), [l / C_0.constants[0], m / C_0.constants[1]], fi]

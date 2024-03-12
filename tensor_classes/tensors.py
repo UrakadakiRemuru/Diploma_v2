@@ -42,6 +42,8 @@ class TransverselyIsotropicTensor:
 
         a, b, c, d, e, f = self.components
         delta = 2 * (a * f - c * d)
+        if delta == 0 and a == b == c == d == e == f:
+            return TransverselyIsotropicTensor([0 for _ in range(6)])
         return TransverselyIsotropicTensor([f / 2 / delta, 1 / b, - c / delta, - d / delta, 4 / e, 2 * a / delta])
 
 
