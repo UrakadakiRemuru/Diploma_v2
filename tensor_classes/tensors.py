@@ -1,5 +1,5 @@
 from math import pi
-from typing import List, Annotated
+from typing import List, Annotated, Dict
 from operations.operations import multiplication, addition
 
 
@@ -87,10 +87,11 @@ class HillsTensor(TransverselyIsotropicTensor):
     @property
     def components(self) -> Annotated[List[float], 6]:
         if len(self.__size) == 1:
-            self._components = addition([
-                multiplication((1 - self.__kappa_0) / 9 / self.__mu_0, self.E1),
-                multiplication((5 - 2 * self.__kappa_0) / 15 / self.__mu_0, self.E2)
-            ])
+            try:
+                self._components = addition([multiplication((1 - self.__kappa_0) / 3 / self.__mu_0, self.E1),
+                                             multiplication((5 - 2 * self.__kappa_0) / 15 / self.__mu_0, self.E2)])
+            except AttributeError:
+                pass
             return self._components
         elif len(self.__size) == 2:
             self._components = [
@@ -110,3 +111,52 @@ class HillsTensor(TransverselyIsotropicTensor):
     @components.deleter
     def components(self):
         del self._components
+
+
+class ComplianceTensor(TransverselyIsotropicTensor):
+
+    def __init__(self, constants: Annotated[List[float], 2]):
+        super(ComplianceTensor, self).__init__(constants)
+        self._components = []
+
+    @property
+    def components(self) -> Annotated[List[float], 6]:
+        l, m = self.constants
+        self._components = [
+            (l + 2 * m) / 4 / m / (3 * l + 2 * m),
+            1 / 2 / m,
+            - l / 2 / m / (3 * l + 2 * m),
+            - l / 2 / m / (3 * l + 2 * m),
+            1 / m,
+            2 * (l + m) / 2 / m / (3 * l + 2 * m)
+        ]
+        return self._components
+
+class DualHillsTensor(TransverselyIsotropicTensor):
+    def __init__(self, constants: Annotated[List[float], 2], size: Annotated[List[float], 3 | 2 | 1]):
+        super().__init__(constants)
+        self.__lambda_0, self.__mu_0 = self.constants[0], self.constants[1]
+        self.__size: Annotated[List[float], 3 | 2 | 1] = size
+        self.__gamma: float = self.__size[1] / self.__size[0]
+        self.__kappa_0: float = (self.__lambda_0 + self.__mu_0) / (self.__lambda_0 + 2 * self.__mu_0)
+        self._components = []
+
+    @property
+    def components(self) -> Annotated[List[float], 6]:
+        if len(self.__size) == 1:
+            try:
+                self._components = addition([multiplication(- 4 * self.__mu_0 * (1 - 4 * self.__kappa_0) / 3, self.E1),
+                                             multiplication(2 * self.__mu_0 * (5 + 2 * self.__kappa_0) / 15, self.E2)])
+            except AttributeError:
+                pass
+            return self._components
+        elif len(self.__size) == 2:
+            self._components = [
+                self.__mu_0 * (4 * self.__kappa_0 - 1 - pi * (7 * self.__kappa_0 - 2) * self.__gamma / 4),
+                2 * self.__mu_0 * (1 - pi * (4 -  self.__kappa_0) * self.__gamma / 8),
+                pi * self.__mu_0 * (3 * self.__kappa_0 - 1) * self.__gamma / 2,
+                pi * self.__mu_0 * (3 * self.__kappa_0 - 1) * self.__gamma / 2,
+                pi * self.__mu_0 * (2 * self.__kappa_0 + 1) * self.__gamma,
+                pi * self.__mu_0 * self.__kappa_0 * self.__gamma
+            ]
+            return self._components

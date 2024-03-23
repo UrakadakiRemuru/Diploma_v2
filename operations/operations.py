@@ -43,3 +43,6 @@ def addition(vectors: List[List], sign: bool = True) -> List[float]:
         result.append(sum)
 
     return result
+
+def E_nu_to_lam_mu(E: float, nu: float) -> List[float]:
+    return [nu * E / (1 + nu) / (1 - 2 * nu), E / 2 / (1 + nu)]

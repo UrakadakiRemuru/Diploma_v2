@@ -1,23 +1,7 @@
-import math
+from operations.operations import E_nu_to_lam_mu
 
-from calculations import initialize, lambda_tensor_calculate, effective_stiffness_calculate, \
-    effective_stiffness_calculate_maxwell_method, effective_stiffness_calculate_kanaun_levin_method
-
-from Inhomogeneities.Inhomogeneities import inhomogeneity
-
-import matplotlib.pyplot as plt
-
-
-lame_coefficients = [1, 2]
-# C_0 = ElasticStiffnessTensor(lame_coefficients)
-# C_1 = ElasticStiffnessTensor(lame_coefficients)
-# I = TransverselyIsotropicTensor([1, 1])
-spheroid_inhomo = inhomogeneity([1, 0.001], lame_coefficients, 'spheroid')
-
-
-
-# меняем коэффы ламе и смотрим, что происходит
-print('Без учета взаимодействия.')
+from maxwell_method import m_compliance_tensor_by_volume_fraction
+from linear_maxwell_method import lm_compliance_tensor_by_volume_fraction
 
 n = 5  # количество неоднородностей
 
@@ -27,157 +11,36 @@ volume = 1  # значение объема репрезентативного �
 
 lame_coefficients_list = [[100 / 10 ** i, 100 / 10 ** i] for i in range(5)]
 
-# C_eff_list = []
-# for i in lame_coefficients_list:
-#     structure = initialize([1, 1], [[1, 0.001] for _ in range(n)], [i for _ in range(n)], ['spheroid' for _ in range(n)])
-#     lambda_tensors = lambda_tensor_calculate(structure)
-#     res = effective_stiffness_calculate(structure, lambda_tensors, volume)
-#     C_eff_list.append(res)
+# 1
+matrix_const = E_nu_to_lam_mu(1000, 0.3)
+inhomo_const = E_nu_to_lam_mu(10, 0.3)
 #
-# for i in C_eff_list:
-#     print(i)
+# # 2
+# matrix_const = E_nu_to_lam_mu(10, 0.3)
+# inhomo_const = E_nu_to_lam_mu(1000, 0.3)
 #
-# # Зависимость коэффициентов тензора модулей упругости от объемной доли
-#
-# b_list = [3 / 4 * volume / n * fi / math.pi / 1 for fi in fi_list]
-#
-# C_eff_list_plot = []
-#
-# for b in b_list:
-#     structure = initialize([1, 1], [[1, b] for _ in range(n)], [[7, 15] for _ in range(n)],
-#                            ['spheroid' for _ in range(n)])
-#     lambda_tensors = lambda_tensor_calculate(structure)
-#     C_eff_list_plot.append(effective_stiffness_calculate(structure, lambda_tensors, volume))
-#
-# C_list = []
-# FI_list = []
-# for tensor in C_eff_list_plot:
-#     for i, component in enumerate(tensor):
-#         if i == 0:
-#             C_list.append(component)
-#         elif i == 3:
-#             FI_list.append(component)
-#
-# smth = zip(*C_list)
-# num = 1
-# for el in smth:
-#     plt.plot(FI_list, list(el), label=f'C_{num}')
-#     num += 1
-# plt.legend()
-# plt.grid(color='gray', linestyle='-', linewidth=0.1)
-# plt.xlabel('Объемная доля')
-# plt.show()
+# # 3
+# matrix_const = inhomo_const = E_nu_to_lam_mu(1000, 0.3)
 
-# Учет взаимодействия методом Максвелла.
+
+
+print('Без учета взаимодействия.')
+
+print('------------------------------------------------')
+
+
 print('Учет взаимодействия методом Максвелла.')
-
-# меняем коэффы ламе и смотрим, что происходит
-
-n = 5  # количество неоднородностей
-
-fi_list = [i / 10 for i in range(0, 11)]  # объемная доля
-
-volume = 0.1  # значение объема репрезентативного объема
-
-lame_coefficients_list = [[100 / 10 ** i, 100 / 10 ** i] for i in range(5)]
-
-print('Коэфы Ламе:', lame_coefficients_list)
-
-# C_eff_list = []
-# for i in lame_coefficients_list:
-#     structure = initialize([1, 1], [[1, 0.04] for _ in range(n)], [i for _ in range(n)], ['spheroid' for _ in range(n)])
-#     lambda_tensors = lambda_tensor_calculate(structure)
-#     res = effective_stiffness_calculate_maxwell_method(structure, lambda_tensors, volume)
-#     C_eff_list.append(res)
-#
-# for i in C_eff_list:
-#     print(i)
-
-# Зависимость коэффициентов тензора модулей упругости от объемной доли
-
-b_list = [3 / 4 * volume / n * fi / math.pi / 1 for fi in fi_list]
+m_compliance_tensor_by_volume_fraction(volume, n, fi_list, matrix_const, inhomo_const)
+print('------------------------------------------------')
 
 
-C_eff_list_plot = []
+print('Учет взаимодействия линеаризованным методом Максвелла.')
+lm_compliance_tensor_by_volume_fraction(volume, n, fi_list, matrix_const, inhomo_const)
+print('------------------------------------------------')
 
-for b in b_list:
-    structure = initialize([10, 10], [[1, b] for _ in range(n)], [[7, 15] for _ in range(n)],
-                           ['spheroid' for _ in range(n)])
-    lambda_tensors = lambda_tensor_calculate(structure)
-    C_eff_list_plot.append(effective_stiffness_calculate_maxwell_method(structure, lambda_tensors, volume))
 
-C_list = []
-FI_list = []
-for tensor in C_eff_list_plot:
-    for i, component in enumerate(tensor):
-        if i == 0:
-            print('компоненты', component)
-            C_list.append(component)
-        elif i == 3:
-            FI_list.append(component)
-            print('доля', component)
-
-smth = zip(*C_list)
-num = 1
-for el in smth:
-    plt.plot(FI_list, list(el), label=f'C_{num}')
-    num += 1
-plt.title('Учет взаимодействия методом Максвелла')
-plt.legend()
-plt.grid(color='gray', linestyle='-', linewidth=0.1)
-plt.xlabel('Объемная доля')
-plt.show()
-
-# Учет взаимодействия методом Канауна-Левина.
 print('Учет взаимодействия методом Канауна-Левина.')
 
-n = 5  # количество неоднородностей
-
-fi_list = [i / 10 for i in range(0, 11)]  # объемная доля
-
-volume = 0.1  # значение объема репрезентативного объема
-
-lame_coefficients_list = [[100 / 10 ** i, 100 / 10 ** i] for i in range(5)]
+print('------------------------------------------------')
 
 
-# C_eff_list = []
-# for i in lame_coefficients_list:
-#     structure = initialize([1, 1], [[1, 0.04] for _ in range(n)], [i for _ in range(n)], ['spheroid' for _ in range(n)])
-#     res = effective_stiffness_calculate_kanaun_levin_method(structure, volume)
-#     C_eff_list.append(res)
-#
-# for i in C_eff_list:
-#     print(i)
-
-# Зависимость коэффициентов тензора модулей упругости от объемной доли
-
-b_list = [3 / 4 * volume / n * fi / math.pi / 1 for fi in fi_list]
-
-C_eff_list_plot = []
-
-for b in b_list:
-    structure = initialize([10, 10], [[1, b] for _ in range(n)], [[7, 15] for _ in range(n)],
-                           ['spheroid' for _ in range(n)])
-    C_eff_list_plot.append(effective_stiffness_calculate_kanaun_levin_method(structure, volume))
-
-C_list = []
-FI_list = []
-for tensor in C_eff_list_plot:
-    for i, component in enumerate(tensor):
-        if i == 0:
-            print('компоненты', component)
-            C_list.append(component)
-        elif i == 3:
-            FI_list.append(component)
-            print('доля', component)
-
-smth = zip(*C_list)
-num = 1
-for el in smth:
-    plt.plot(FI_list, list(el), label=f'C_{num}')
-    num += 1
-plt.title('Учет взаимодействия методом Канауна-Левина')
-plt.legend()
-plt.grid(color='gray', linestyle='-', linewidth=0.1)
-plt.xlabel('Объемная доля')
-plt.show()

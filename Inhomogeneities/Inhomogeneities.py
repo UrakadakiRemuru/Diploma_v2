@@ -1,7 +1,7 @@
 from typing import List, Annotated
 from math import pi
 
-from tensor_classes.tensors import HillsTensor, ElasticStiffnessTensor
+from tensor_classes.tensors import HillsTensor, ElasticStiffnessTensor, DualHillsTensor, ComplianceTensor
 
 
 class inhomogeneity:
@@ -31,8 +31,10 @@ class inhomogeneity:
 
         self.size: Annotated[List[float], 3 | 2 | 1] = size
         self.stiffness_tensor = ElasticStiffnessTensor(const)
+        self.compliance_tensor = ComplianceTensor(const)
         self.inhomo_type: str = inhomo_type
         self.hills_tensor = HillsTensor(const, self.size)
+        self.dual_hills_tensor = DualHillsTensor(const, self.size)
 
     @property
     def volume(self) -> float:
@@ -44,4 +46,3 @@ class inhomogeneity:
             return 4 / 3 * pi * self.size[0] ** 2 * self.size[1]
         elif self.inhomo_type == self.__type_list[2]:
             return 4 / 3 * pi * self.size[0] * self.size[1] * self.size[2]
-
