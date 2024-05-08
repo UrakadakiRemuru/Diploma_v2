@@ -1,19 +1,16 @@
-from typing import Annotated, List, Tuple, Union
+from typing import Annotated, List, Union
 
-from tensor_classes.tensors import (TransverselyIsotropicTensor,
-                                    ResultTransverselyIsotropicTensor,
-                                    ElasticStiffnessTensor,
-                                    HillsTensor, ComplianceTensor)
-from operations.tensor_operations import addition, double_dot_product, multiplication
-from Inhomogeneities.Inhomogeneities import inhomogeneity
+
+from orientations.inhomogeneities import inhomogeneity
+from orientations.tensor_operations import addition, double_dot_product, multiplication
+from orientations.tensors import ElasticStiffnessTensor, ComplianceTensor, IsotropicTensor
 
 
 def initialize(
         matrix_const: Annotated[List[float], 2],
         inhomogeneity_size_list: List[Annotated[List[float], 3 | 2 | 1]],
         inhomogeneity_const_list: List[Annotated[List[float], 2]],
-        inhomogenetiy_type_list: List[str],
-        orientation: bool
+        inhomogenetiy_type_list: List[str]
 ) -> List[Union[ElasticStiffnessTensor, List[inhomogeneity]]]:
     '''
     Инициализация тензорa жесткости матрицы и неоднородностей.
@@ -27,20 +24,20 @@ def initialize(
     return [
         ElasticStiffnessTensor(matrix_const),
         ComplianceTensor(matrix_const),
-        [inhomogeneity(a, matrix_const, b, orientation, c) for a, b, c in
+        [inhomogeneity(a, matrix_const, b, c) for a, b, c in
          zip(inhomogeneity_size_list, inhomogeneity_const_list, inhomogenetiy_type_list)]
     ]
 
 
 def lambda_eps_tensor_calculate(structure: List[Union[ElasticStiffnessTensor, List[inhomogeneity]]]) -> List[
-    ResultTransverselyIsotropicTensor]:
+    IsotropicTensor]:
     '''
     Вычисление тензора Λ_e.
     :param structure: Массив из тензора жеткости матрицы и неоднородностей.
         :return: Массив тензоров Λ_e.
     '''
 
-    I = TransverselyIsotropicTensor([1, 1])
+    I = IsotropicTensor([1, 1])
     C_0 = structure[0]
     inhomos = structure[2]
 
@@ -55,14 +52,14 @@ def lambda_eps_tensor_calculate(structure: List[Union[ElasticStiffnessTensor, Li
 
 
 def lambda_sig_tensor_calculate(structure: List[Union[ComplianceTensor, List[inhomogeneity]]]) -> List[
-    ResultTransverselyIsotropicTensor]:
+    IsotropicTensor]:
     '''
     Вычисление тензора Λ_g.
     :param structure: Массив из тензора жеткости матрицы и неоднородностей.
         :return: Массив тензоров Λ_g.
     '''
 
-    I = TransverselyIsotropicTensor([1, 1])
+    I = IsotropicTensor([1, 1])
     S_0 = structure[1]
     inhomos = structure[2]
 
@@ -75,33 +72,11 @@ def lambda_sig_tensor_calculate(structure: List[Union[ComplianceTensor, List[inh
 
     return result
 
-
-def is_elastic_modules_exist(c_eff_components: list[float]) -> str:
-    '''
-    Проверка существования полученного материала.
-    :param c_eff_components: Компоненты тензора эффективной упругости.
-    :return: Существует материал или нет.
-    '''
-    m = c_eff_components[1] / 2
-    l = c_eff_components[0] - m
-
-    if m <= 0 and l + 2 * m <= 0:
-        return f"Такой материал не может существовать, так как μ = {m} <= 0 и λ + 2μ = {l + 2 * m} <= 0."
-
-    if m <= 0:
-        return f"Такой материал не может существовать, так как μ = {m} <= 0."
-
-    if l + 2 * m <= 0:
-        return f"Такой материал не может существовать, так как λ + 2μ = {l + 2 * m} <= 0."
-
-    return "Такой материал может существовать."
-
-
 def effective_stiffness_calculate(
         structure: List[Union[ElasticStiffnessTensor, List[inhomogeneity]]],
-        lambda_list: List[ResultTransverselyIsotropicTensor],
+        lambda_list: List[IsotropicTensor],
         volume: float
-) -> List[Union[ResultTransverselyIsotropicTensor, str, Annotated[List[float], 2], float]]:
+) -> List[Union[IsotropicTensor, Annotated[List[float], 2], float]]:
     '''
     Находит эффективный тензор жесткости, соотношение коэффициентов Ламе для матрицы и неоднородности, и объемную долю.
     :param structure: Массив из тензора жеткости матрицы и неоднородностей.
@@ -123,13 +98,13 @@ def effective_stiffness_calculate(
         l, m = inhomo.stiffness_tensor.constants
 
     C_eff = addition(smth + [C_0]).components
-    return [C_eff, is_elastic_modules_exist(C_eff), [l / C_0.constants[0], m / C_0.constants[1]], fi]
+    return [C_eff, [l / C_0.constants[0], m / C_0.constants[1]], fi]
 
 def effective_compliance_calculate(
         structure: List[Union[ComplianceTensor, List[inhomogeneity]]],
-        lambda_list: List[ResultTransverselyIsotropicTensor],
+        lambda_list: List[IsotropicTensor],
         volume: float
-) -> List[Union[ResultTransverselyIsotropicTensor, str, Annotated[List[float], 2], float]]:
+) -> List[Union[IsotropicTensor, Annotated[List[float], 2], float]]:
     '''
     Находит эффективный тензор податливости, соотношение коэффициентов Ламе для матрицы и неоднородности, и объемную долю.
     :param structure: Массив из тензора жеткости матрицы и неоднородностей.
@@ -151,13 +126,13 @@ def effective_compliance_calculate(
         l, m = inhomo.stiffness_tensor.constants
 
     S_eff = addition(smth + [S_0]).components
-    return [S_eff, is_elastic_modules_exist(S_eff), [l / S_0.constants[0], m / S_0.constants[1]], fi]
+    return [S_eff, [l / S_0.constants[0], m / S_0.constants[1]], fi]
 
 def effective_stiffness_calculate_maxwell_method(
         structure: List[Union[ElasticStiffnessTensor, List[inhomogeneity]]],
-        lambda_list: List[ResultTransverselyIsotropicTensor],
+        lambda_list: List[IsotropicTensor],
         volume: float
-) -> List[Union[ResultTransverselyIsotropicTensor, str, Annotated[List[float], 2], float]]:
+) -> List[Union[IsotropicTensor, Annotated[List[float], 2], float]]:
     '''
     Находит эффективный тензор жесткости, соотношение коэффициентов Ламе для матрицы и неоднородности, и объемную долю.
     :param structure: Массив из тензора жеткости матрицы и неоднородностей.
@@ -189,14 +164,14 @@ def effective_stiffness_calculate_maxwell_method(
         step_7 = multiplication(fi, step_6)
         C_eff = addition([C_0, step_7]).components
 
-    return [C_eff, is_elastic_modules_exist(C_eff), [l / C_0.constants[0], m / C_0.constants[1]], fi]
+    return [C_eff, [l / C_0.constants[0], m / C_0.constants[1]], fi]
 
 
 def effective_compliance_calculate_maxwell_method(
         structure: List[Union[ComplianceTensor, List[inhomogeneity]]],
-        lambda_list: List[ResultTransverselyIsotropicTensor],
+        lambda_list: List[IsotropicTensor],
         volume: float
-) -> List[Union[ResultTransverselyIsotropicTensor, str, Annotated[List[float], 2], float]]:
+) -> List[Union[IsotropicTensor, Annotated[List[float], 2], float]]:
     '''
     Находит эффективный тензор податливости, соотношение коэффициентов Ламе для матрицы и неоднородности, и объемную долю.
     :param structure: Массив из тензора жеткости матрицы и неоднородностей.
@@ -228,14 +203,14 @@ def effective_compliance_calculate_maxwell_method(
         step_7 = multiplication(fi, step_6)
         S_eff = addition([S_0, step_7]).components
 
-    return [S_eff, is_elastic_modules_exist(S_eff), [l / S_0.constants[0], m / S_0.constants[1]], fi]
+    return [S_eff, [l / S_0.constants[0], m / S_0.constants[1]], fi]
 
 
 def effective_stiffness_calculate_linear_maxwell_method(
         structure: List[Union[ElasticStiffnessTensor, List[inhomogeneity]]],
-        lambda_list: List[ResultTransverselyIsotropicTensor],
+        lambda_list: List[IsotropicTensor],
         volume: float
-) -> List[Union[ResultTransverselyIsotropicTensor, str, Annotated[List[float], 2], float]]:
+) -> List[Union[IsotropicTensor, Annotated[List[float], 2], float]]:
     '''
     Находит эффективный тензор жесткости, соотношение коэффициентов Ламе для матрицы и неоднородности, и объемную долю.
     :param structure: Массив из тензора жеткости матрицы и неоднородностей.
@@ -266,13 +241,13 @@ def effective_stiffness_calculate_linear_maxwell_method(
         step_2 = double_dot_product([N_sum, step_1])
         C_eff = addition([C_0, N_sum, step_2]).components
 
-    return [C_eff, is_elastic_modules_exist(C_eff), [l / C_0.constants[0], m / C_0.constants[1]], fi]
+    return [C_eff, [l / C_0.constants[0], m / C_0.constants[1]], fi]
 
 def effective_compliance_calculate_linear_maxwell_method(
         structure: List[Union[ComplianceTensor, List[inhomogeneity]]],
-        lambda_list: List[ResultTransverselyIsotropicTensor],
+        lambda_list: List[IsotropicTensor],
         volume: float
-) -> List[Union[ResultTransverselyIsotropicTensor, str, Annotated[List[float], 2], float]]:
+) -> List[Union[IsotropicTensor, Annotated[List[float], 2], float]]:
     '''
     Находит эффективный тензор податливости, соотношение коэффициентов Ламе для матрицы и неоднородности, и объемную долю.
     :param structure: Массив из тензора жеткости матрицы и неоднородностей.
@@ -303,13 +278,12 @@ def effective_compliance_calculate_linear_maxwell_method(
         step_2 = double_dot_product([H_sum, step_1])
         S_eff = addition([S_0, H_sum, step_2]).components
 
-    return [S_eff, is_elastic_modules_exist(S_eff), [l / S_0.constants[0], m / S_0.constants[1]], fi]
+    return [S_eff, [l / S_0.constants[0], m / S_0.constants[1]], fi]
 
 def effective_stiffness_calculate_kanaun_levin_method(
         structure: List[Union[ElasticStiffnessTensor, List[ElasticStiffnessTensor]]],
-        lambda_list: List[ResultTransverselyIsotropicTensor],
         volume: float
-) -> List[Union[ResultTransverselyIsotropicTensor, str, Annotated[List[float], 2], float]]:
+) -> List[Union[IsotropicTensor, Annotated[List[float], 2], float]]:
     '''
     Находит эффективный тензор жесткости, соотношение коэффициентов Ламе для матрицы и неоднородности, и объемную долю.
     :param structure: Массив из тензора жеткости матрицы и неоднородностей.
@@ -320,31 +294,29 @@ def effective_stiffness_calculate_kanaun_levin_method(
     C_0 = structure[0]
     inhomos = structure[2]
     fi = 0
-    N_list = []
-    for inhomo, lambd in zip(inhomos, lambda_list):
+    for inhomo in inhomos:
         dev_v = inhomo.volume / volume
         fi += dev_v
         C_1 = inhomo.stiffness_tensor
         P = inhomo.hills_tensor
         l, m = inhomo.stiffness_tensor.constants
-        dC = addition([C_1, C_0], False)
-        N_list.append(multiplication(dev_v, double_dot_product([dC, lambd])))
 
-    step_1 = addition(N_list).inverse()
-    step_2 = addition([step_1, P], False).inverse()
+    step_1 = addition([C_1, C_0], False).inverse()
+    step_2 = multiplication(1 - fi, P)
+    step_3 = addition([step_1, step_2]).inverse()
+    step_4 = multiplication(fi, step_3)
 
     if fi == 0:
         C_eff = C_0.components
     else:
         pass
-    C_eff = addition([C_0, step_2]).components
-    return [C_eff, is_elastic_modules_exist(C_eff), [l / C_0.constants[0], m / C_0.constants[1]], fi]
+    C_eff = addition([C_0, step_4]).components
+    return [C_eff, [l / C_0.constants[0], m / C_0.constants[1]], fi]
 
 def effective_compliance_calculate_kanaun_levin_method(
         structure: List[Union[ElasticStiffnessTensor, List[ElasticStiffnessTensor]]],
-        lambda_list: List[ResultTransverselyIsotropicTensor],
         volume: float
-) -> List[Union[ResultTransverselyIsotropicTensor, str, Annotated[List[float], 2], float]]:
+) -> List[Union[IsotropicTensor, Annotated[List[float], 2], float]]:
     '''
     Находит эффективный тензор жесткости, соотношение коэффициентов Ламе для матрицы и неоднородности, и объемную долю.
     :param structure: Массив из тензора жеткости матрицы и неоднородностей.
@@ -355,31 +327,30 @@ def effective_compliance_calculate_kanaun_levin_method(
     S_0 = structure[1]
     inhomos = structure[2]
     fi = 0
-    H_list = []
-    for inhomo, lambd in zip(inhomos, lambda_list):
+    for inhomo in inhomos:
         dev_v = inhomo.volume / volume
         fi += dev_v
         S_1 = inhomo.compliance_tensor
         Q = inhomo.dual_hills_tensor
         l, m = inhomo.stiffness_tensor.constants
-        dS = addition([S_1, S_0], False)
-        H_list.append(multiplication(dev_v, double_dot_product([dS, lambd])))
 
-    step_1 = addition(H_list).inverse()
-    step_2 = addition([step_1, Q], False).inverse()
+    step_1 = addition([S_1, S_0], False).inverse()
+    step_2 = multiplication(1 - fi, Q)
+    step_3 = addition([step_1, step_2]).inverse()
+    step_4 = multiplication(fi, step_3)
 
     if fi == 0:
         S_eff = S_0.components
     else:
         pass
-    S_eff = addition([S_0, step_2]).components
-    return [S_eff, is_elastic_modules_exist(S_eff), [l / S_0.constants[0], m / S_0.constants[1]], fi]
+    S_eff = addition([S_0, step_4]).components
+    return [S_eff, [l / S_0.constants[0], m / S_0.constants[1]], fi]
 
 def effective_stiffness_calculate_mori_tanaka_method(
         structure: List[Union[ElasticStiffnessTensor, List[inhomogeneity]]],
-        lambda_list: List[ResultTransverselyIsotropicTensor],
+        lambda_list: List[IsotropicTensor],
         volume: float
-) -> List[Union[ResultTransverselyIsotropicTensor, str, Annotated[List[float], 2], float]]:
+) -> List[Union[IsotropicTensor, Annotated[List[float], 2], float]]:
     '''
     Находит эффективный тензор жесткости, соотношение коэффициентов Ламе для матрицы и неоднородности, и объемную долю.
     :param structure: Массив из тензора жеткости матрицы и неоднородностей.
@@ -388,7 +359,7 @@ def effective_stiffness_calculate_mori_tanaka_method(
     '''
 
     C_0 = structure[0]
-    I = TransverselyIsotropicTensor([1, 1])
+    I = IsotropicTensor([1, 1])
     inhomos = structure[2]
     smth: list = []
     fi = 0
@@ -412,13 +383,13 @@ def effective_stiffness_calculate_mori_tanaka_method(
         step_7 = double_dot_product([step_6, step_3])
         C_eff = addition([C_0, step_7]).components
 
-    return [C_eff, is_elastic_modules_exist(C_eff), [l / C_0.constants[0], m / C_0.constants[1]], fi]
+    return [C_eff, [l / C_0.constants[0], m / C_0.constants[1]], fi]
 
 def effective_compliance_calculate_mori_tanaka_method(
         structure: List[Union[ElasticStiffnessTensor, List[inhomogeneity]]],
-        lambda_list: List[ResultTransverselyIsotropicTensor],
+        lambda_list: List[IsotropicTensor],
         volume: float
-) -> List[Union[ResultTransverselyIsotropicTensor, str, Annotated[List[float], 2], float]]:
+) -> List[Union[IsotropicTensor, Annotated[List[float], 2], float]]:
     '''
     Находит эффективный тензор податливости, соотношение коэффициентов Ламе для матрицы и неоднородности, и объемную долю.
     :param structure: Массив из тензоров податливостей матрицы и неоднородностей.
@@ -427,7 +398,7 @@ def effective_compliance_calculate_mori_tanaka_method(
     '''
 
     S_0 = structure[1]
-    I = TransverselyIsotropicTensor([1, 1])
+    I = IsotropicTensor([1, 1])
     inhomos = structure[2]
     smth: list = []
     fi = 0
@@ -451,4 +422,4 @@ def effective_compliance_calculate_mori_tanaka_method(
         step_7 = double_dot_product([step_6, step_3])
         S_eff = addition([S_0, step_7]).components
 
-    return [S_eff, is_elastic_modules_exist(S_eff), [l / S_0.constants[0], m / S_0.constants[1]], fi]
+    return [S_eff, [l / S_0.constants[0], m / S_0.constants[1]], fi]

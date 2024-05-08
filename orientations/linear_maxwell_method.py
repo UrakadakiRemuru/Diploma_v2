@@ -59,7 +59,7 @@ def lm_stiffness_tensor_by_volume_fraction(volume: float, n: int, fi_list: List[
             if i == 0:
                 print('компоненты', component)
                 C_list.append(component)
-            elif i == 3:
+            elif i == 2:
                 FI_list.append(component)
                 print('доля', component)
 
@@ -102,7 +102,7 @@ def lm_compliance_tensor_by_volume_fraction(volume: float, n: int, fi_list: List
             if i == 0:
                 print('компоненты', component)
                 S_list.append(component)
-            elif i == 3:
+            elif i == 2:
                 FI_list.append(component)
                 print('доля', component)
 

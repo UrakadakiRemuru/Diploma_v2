@@ -1,13 +1,13 @@
 from typing import List, Annotated
 from math import pi
 
-from operations.tensor_operations import avg_over_orientations
-from tensor_classes.tensors import HillsTensor, ElasticStiffnessTensor, DualHillsTensor, ComplianceTensor
+from orientations.tensor_operations import addition, double_dot_product
+from tensors import HillsTensor, ElasticStiffnessTensor, ComplianceTensor
 
 
 class inhomogeneity:
     '''Представление неоднородности.'''
-    def __init__(self, size: Annotated[List[float], 3 | 2 | 1], const_0: List[float], const_1: List[float], orientation: bool, inhomo_type: str = ''):
+    def __init__(self, size: Annotated[List[float], 3 | 2 | 1], const_0: List[float], const_1: List[float], inhomo_type: str = ''):
         '''
         Создает неоднородность с заданными размерами, физическими свойствами и типом.
         :param size: Массив размерностей неоднородности в трехмерном пространстве [a1, a2, a3]. В зависимости от типа неоднородности этот массив имеет различную размерность. 'sphere' - 1 компонента [a], 'spheroid' - 2 компоненты [a1 = a2 = a, a3], 'ellipsoid' - 3 компоненты [a1, a2, a3].
@@ -32,17 +32,12 @@ class inhomogeneity:
             raise Exception('Массив размерностей должен содержать три компоненты.')
 
         self.size: Annotated[List[float], 3 | 2 | 1] = size
+        self.stiffness_tensor = ElasticStiffnessTensor(const_1)
+        self.compliance_tensor = ComplianceTensor(const_1)
         self.inhomo_type: str = inhomo_type
-        if not orientation:
-            self.stiffness_tensor = ElasticStiffnessTensor(const_1)
-            self.compliance_tensor = ComplianceTensor(const_1)
-            self.hills_tensor = HillsTensor(const_0, self.size)
-            self.dual_hills_tensor = DualHillsTensor(const_0, self.size)
-        else:
-            self.stiffness_tensor = avg_over_orientations(ElasticStiffnessTensor(const_1))
-            self.compliance_tensor = avg_over_orientations(ComplianceTensor(const_1))
-            self.hills_tensor = avg_over_orientations(HillsTensor(const_0, self.size))
-            self.dual_hills_tensor = avg_over_orientations(DualHillsTensor(const_0, self.size))
+        self.hills_tensor = HillsTensor(const_0, self.size)
+        C_0 = ElasticStiffnessTensor(const_0)
+        self.dual_hills_tensor = addition([C_0, double_dot_product([C_0, self.hills_tensor, C_0])], False)
 
     @property
     def volume(self) -> float:

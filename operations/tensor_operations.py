@@ -59,3 +59,14 @@ def double_dot_product(tensors: Annotated[List[ElasticStiffnessTensor | ResultTr
               a6 * b6 + 2 * a4 * b3]
 
     return ResultTransverselyIsotropicTensor(result)
+
+def avg_over_orientations(tensor: TransverselyIsotropicTensor) -> ResultTransverselyIsotropicTensor:
+    c = tensor.components
+    return ResultTransverselyIsotropicTensor([
+        1 / 15 * (7 * c[0] + c[1] + 3 * c[2] + 3 * c[3] + 0.5 * c[4] + 2 * c[5]),
+        1 / 15 * (2 * c[0] + 6 * c[1] - 2 * c[2] - 2 * c[3] + 3 * c[4] + 2 * c[5]),
+        1 / 15 * (6 * c[0] - 2 * c[1] + 4 * c[2] + 4 * c[3] - c[4] + c[5]),
+        1 / 15 * (6 * c[0] - 2 * c[1] + 4 * c[2] + 4 * c[3] - c[4] + c[5]),
+        1 / 15 * (4 * c[0] + 12 * c[1] - 4 * c[2] - 4 * c[3] + 6 * c[4] + 4 * c[5]),
+        1 / 15 * (8 * c[0] + 4 * c[1] + 2 * c[2] + 2 * c[3] + 2 * c[4] + 3 * c[5]),
+    ])
