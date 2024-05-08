@@ -5,6 +5,7 @@ from calculations import effective_compliance_calculate_kanaun_levin_method, \
     effective_compliance_calculate_maxwell_method
 from operations.operations import E_nu_to_lam_mu
 from plots_by_volume_fraction import tensor_by_volume_fraction
+from yield_stress import yield_stress_by_volume_fraction
 
 n = 5  # количество неоднородностей
 
@@ -80,4 +81,7 @@ tensor_by_volume_fraction(volume, n, fi_list, matrix_const, inhomo_const, effect
 tensor_by_volume_fraction(volume, n, fi_list, matrix_const, inhomo_const, effective_compliance_calculate_kanaun_levin_method, True)
 print('------------------------------------------------')
 
+print('Эффективный предел текучести.')
+yield_stress_by_volume_fraction(volume, n, fi_list, matrix_const, inhomo_const)
+print('------------------------------------------------')
 

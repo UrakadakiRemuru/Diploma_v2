@@ -1,9 +1,11 @@
+import math
 from typing import Annotated, List, Tuple, Union
 
+from operations.operations import Lam_mu_to_nu
 from tensor_classes.tensors import (TransverselyIsotropicTensor,
                                     ResultTransverselyIsotropicTensor,
                                     ElasticStiffnessTensor,
-                                    HillsTensor, ComplianceTensor)
+                                    HillsTensor, ComplianceTensor, DualHillsTensor)
 from operations.tensor_operations import addition, double_dot_product, multiplication
 from Inhomogeneities.Inhomogeneities import inhomogeneity
 
@@ -452,3 +454,57 @@ def effective_compliance_calculate_mori_tanaka_method(
         S_eff = addition([S_0, step_7]).components
 
     return [S_eff, is_elastic_modules_exist(S_eff), [l / S_0.constants[0], m / S_0.constants[1]], fi]
+
+def calculate_stress() -> Annotated[List[float], 2]:
+    '''
+    Производит вычисление тензора напряжений
+    :return: Возвращает след тензора напряжений и свертку девиаторов напряжений.
+    '''
+    pass
+
+def calculate_constants_for_yield_stress(Q: DualHillsTensor, fi: float, matrix_const: List[float]) -> Annotated[List[float], 2]:
+    '''
+    Вычисление констант для нахождения эффективного предела текучести.
+    :param Q: Дуальный тензор Хилла.
+    :param fi: Объемная доля.
+    :param matrix_const: Параметры Ламе матрицы материала.
+    :return: Список, состоящий из двух констант A_1 и А_2.
+    '''
+
+    nu = Lam_mu_to_nu(matrix_const)
+    q1, q2, q3, q4, q5, q6 = Q.components
+    B: float = (2 * q2 * q5 * (8 * q1 + 22 * q3 + 17 * q6) + (q1 * q6 - q3 ** 2) * (20 * q2 - 43 * q5)) / (
+                60 * q2 * q5 * (q1 * q6 - q3 ** 2))
+    D: float = (2 * q2 * q5 * (q1 + q3 + 4 * q6) + (q1 * q6 - q3 ** 2) * (32 * q2 - 19 * q5)) / (
+                60 * q2 * q5 * (q1 * q6 - q3 ** 2))
+
+    return [
+        fi * 8 * (1 - 2 * nu) / (1 - fi) / 3 / (1 + nu) * B + fi ** 2 * 16 / (1 - fi) ** 2 / 3 * B ** 2,
+        1 + 8 * fi / (1 - fi) * D + 16 * fi ** 2 / (1 - fi) ** 2 * D ** 2
+    ]
+
+
+def calculate_yield_stress(structure: List[Union[ComplianceTensor, List[inhomogeneity]]], volume: float, stress: List[float]) -> Annotated[List[float], 2]:
+    '''
+    Вычисление констант для нахождения эффективного предела текучести в случае изотропного материала со сфероидальными неоднородностями, имеющими случайный разброс ориентаций.
+    :param structure: Массив из тензоров податливостей матрицы и неоднородностей.
+    :param volume: Объем рассматриваемого материала.
+    :param stress: Тензор напряжений второго ранга, имеющий 9 компонент: 3 списка по 3 компоненты в каждом.
+    :return: Эффективный предел текучести
+    '''
+
+    matrix_const = structure[0].constants
+    inhomos = structure[2]
+    trace_sig  = stress[0]
+    ddp_deviator_sig = stress[1]
+    fi = 0
+
+    for inhomo in inhomos:
+        dev_v = inhomo.volume / volume
+        fi += dev_v
+        Q = inhomo.dual_hills_tensor
+    A_1, A_2 = calculate_constants_for_yield_stress(Q, fi, matrix_const)
+
+    yield_stress_eff = math.sqrt(0.5 * A_1 * trace_sig ** 2 + 0.5 * A_2 * ddp_deviator_sig)
+
+    return [yield_stress_eff, fi]
