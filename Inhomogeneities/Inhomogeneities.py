@@ -39,10 +39,16 @@ class inhomogeneity:
             self.hills_tensor = HillsTensor(const_0, self.size)
             self.dual_hills_tensor = DualHillsTensor(const_0, self.size)
         else:
-            self.stiffness_tensor = avg_over_orientations(ElasticStiffnessTensor(const_1))
-            self.compliance_tensor = avg_over_orientations(ComplianceTensor(const_1))
-            self.hills_tensor = avg_over_orientations(HillsTensor(const_0, self.size))
-            self.dual_hills_tensor = avg_over_orientations(DualHillsTensor(const_0, self.size))
+            self.stiffness_tensor = ElasticStiffnessTensor(const_1)
+            self.stiffness_tensor.components = avg_over_orientations(ElasticStiffnessTensor(const_1)).components
+            self.compliance_tensor = ComplianceTensor(const_1)
+            self.compliance_tensor.components = avg_over_orientations(ComplianceTensor(const_1)).components
+            self.hills_tensor = HillsTensor(const_0, self.size)
+            self.hills_tensor.components = avg_over_orientations(HillsTensor(const_0, self.size)).components
+            self.dual_hills_tensor = DualHillsTensor(const_0, self.size)
+            # print('компоненты Q до', self.dual_hills_tensor.components)
+            self.dual_hills_tensor.components = avg_over_orientations(DualHillsTensor(const_0, self.size)).components
+            # print('компоненты Q после', self.dual_hills_tensor.components)
 
     @property
     def volume(self) -> float:

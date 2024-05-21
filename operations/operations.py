@@ -49,3 +49,6 @@ def E_nu_to_lam_mu(E: float, nu: float) -> List[float]:
 
 def Lam_mu_to_nu(lam: float, mu: float) -> float:
     return lam / 2 / (lam + mu)
+
+def K_mu_to_lam_mu(K: float, mu:float):
+    return [K - 2 / 3 * mu, mu]

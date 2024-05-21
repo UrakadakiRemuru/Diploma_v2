@@ -95,10 +95,10 @@ def effective_stiffness_calculate(
         step_2 = multiplication(dev_v, step_1)
         step_3 = double_dot_product([step_2, lam])
         smth.append(step_3)
-        l, m = inhomo.stiffness_tensor.constants
+        l, m = inhomo.C_0.constants
 
     C_eff = addition(smth + [C_0]).components
-    return [C_eff, [l / C_0.constants[0], m / C_0.constants[1]], fi]
+    return [C_eff, [C_eff[0] / l , C_eff[1] / 2 / m], fi]
 
 def effective_compliance_calculate(
         structure: List[Union[ComplianceTensor, List[inhomogeneity]]],
@@ -141,6 +141,7 @@ def effective_stiffness_calculate_maxwell_method(
     '''
 
     C_0 = structure[0]
+    l, m = C_0.constants
     inhomos = structure[2]
     smth: list = []
     fi = 0
@@ -150,7 +151,7 @@ def effective_stiffness_calculate_maxwell_method(
         fi += dev_v
         C_1 = inhomo.stiffness_tensor
         lambd = lam
-        l, m = inhomo.stiffness_tensor.constants
+
 
     if fi == 0:
         C_eff = C_0.components
@@ -164,7 +165,7 @@ def effective_stiffness_calculate_maxwell_method(
         step_7 = multiplication(fi, step_6)
         C_eff = addition([C_0, step_7]).components
 
-    return [C_eff, [l / C_0.constants[0], m / C_0.constants[1]], fi]
+    return [C_eff, [C_eff[1] * (3 * C_eff[0] + 2 * C_eff[1]) / (C_eff[0] + C_eff[1]) / m / (3 * l + 2 * m) * (l + m) , C_eff[1] / m], fi]
 
 
 def effective_compliance_calculate_maxwell_method(
